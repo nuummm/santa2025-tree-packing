@@ -1,0 +1,6 @@
+method,unit,value,trials,cpu,numba
+"shapely polygons, per pair",us/pair,10.64,5000,Apple M5,0.68.1
+"pure-Python SAT, per pair",us/pair,32.81,5000,Apple M5,0.68.1
+"Numba SAT, per pair",us/pair,0.6987,5000,Apple M5,0.68.1
+"shapely annealer, n=200",moves/s,2.799e+04,2000,Apple M5,0.68.1
+"Numba annealer, n=200",moves/s,1.443e+06,2000000,Apple M5,0.68.1

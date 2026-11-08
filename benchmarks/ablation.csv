@@ -1,0 +1,9 @@
+stage,score,delta,n1_20,n21_100,n101_200
+double lattice,80.2122,,11.1275,32.2735,36.8112
++ simulated annealing,72.3578,-7.8544,8.6806,29.2078,34.4694
++ compaction,72.3442,-0.0135,8.6804,29.2040,34.4599
++ remove-one cascade,72.2672,-0.0771,8.6737,29.1677,34.4257
+"+ per-n ensemble of seeds 0,1,2",72.0093,-0.2579,8.6019,29.0632,34.3443
+seed 0 alone (all stages),72.2672,,,,
+seed 1 alone (all stages),72.2281,,,,
+seed 2 alone (all stages),72.2713,,,,
