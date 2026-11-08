@@ -1,4 +1,4 @@
-"""Per-n selection across several runs, gated by the exact validator."""
+"""Per-n selection across several runs, gated by the final validator."""
 
 from __future__ import annotations
 

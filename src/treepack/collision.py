@@ -9,7 +9,7 @@ axis-aligned boxes. A pair test runs three filters, cheapest first:
 
 Every filter only reports "separate" when the gap exceeds ``eps``. Contact or
 near-contact therefore counts as a collision, so anything accepted here is
-strictly apart and survives the exact final check in :mod:`treepack.validate`.
+strictly apart and survives the final check in :mod:`treepack.validate`.
 """
 
 from __future__ import annotations
