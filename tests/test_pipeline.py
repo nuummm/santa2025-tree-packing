@@ -1,8 +1,11 @@
 import json
 
+import numpy as np
+
 from treepack.cli import main
 from treepack.io import read_submission
-from treepack.pipeline import SolveConfig, solve
+from treepack.pipeline import SolveConfig, cascade, solve
+from treepack.scoring import side_of
 from treepack.validate import validate_file
 
 
@@ -35,3 +38,19 @@ def test_cli_validate(tmp_path, small_lattice, capsys):
     assert main(["validate", "--partial", str(tmp_path / "submission.csv")]) == 0
     assert "OK: 3 configurations" in capsys.readouterr().out
     assert main(["validate", str(tmp_path / "submission.csv")]) == 1
+
+
+def test_cascade_takes_smaller_layout_from_n_plus_one():
+    # Two tilted trees: dropping one leaves a tilted tree, smaller than an upright one.
+    tilted_pair = np.array([[0.0, 0.0, 45.0], [2.0, 0.0, 45.0]])
+    upright = np.array([[0.0, 0.0, 0.0]])
+    out = cascade({1: upright, 2: tilted_pair})
+    assert side_of(out[1]) < side_of(upright)
+    assert np.array_equal(out[2], tilted_pair)
+
+
+def test_cascade_keeps_direct_layout_when_it_is_smaller():
+    upright_pair = np.array([[0.0, 0.0, 0.0], [0.7, 0.0, 0.0]])
+    tilted = np.array([[0.0, 0.0, 45.0]])
+    out = cascade({1: tilted, 2: upright_pair})
+    assert np.array_equal(out[1], tilted)

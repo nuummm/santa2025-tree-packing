@@ -8,18 +8,21 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     env:
       NUMBA_CACHE_DIR: ${{ github.workspace }}/.numba_cache
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - uses: actions/cache@v4
         with:
           path: .numba_cache
-          key: numba-${{ runner.os }}-${{ hashFiles('uv.lock', 'src/**/*.py') }}
-          restore-keys: numba-${{ runner.os }}-
+          key: numba-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('uv.lock', 'src/**/*.py') }}
+          restore-keys: numba-${{ runner.os }}-py${{ matrix.python-version }}-
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
