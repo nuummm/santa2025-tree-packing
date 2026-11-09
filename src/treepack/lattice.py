@@ -2,10 +2,11 @@
 
 The unit cell holds tree A at (0, 0, theta) and tree B at (u, v, theta + 180), i.e. B
 is A turned upside down. Cells repeat along a1 = (a, 0) and a2 = (b, c). For fixed
-(theta, u, v) the periods are found by bisection (smallest a for one row, then
-smallest c for each shear b). (theta, u, v) are scanned on a grid and the best point
-is refined by coordinate search. The figure of merit is the cell area a * c: two trees
-per a * c of plane.
+(theta, u, v) the periods are found by bisection (a for one row, then c for each
+shear b). For interlocking shapes feasibility is not monotone in the period, so the
+bisection returns a feasible period that is not guaranteed to be the smallest one.
+(theta, u, v) are scanned on a grid and the best point is refined by coordinate search.
+The figure of merit is the cell area a * c: two trees per a * c of plane.
 
 By translation symmetry a lattice is overlap-free iff A(0) and B(0) are clear of every
 translate within reach, so each feasibility check only looks at those two trees.

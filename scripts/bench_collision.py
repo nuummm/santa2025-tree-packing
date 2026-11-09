@@ -26,6 +26,7 @@ from treepack.pipeline import machine_info
 
 OUT = Path(__file__).resolve().parents[1] / "benchmarks" / "collision.csv"
 N_PAIRS = 5_000
+N_TIMED_SLOW = 1_000  # the shapely and pure-Python versions are timed on a prefix
 REPEATS = 5
 
 
@@ -127,9 +128,9 @@ def main() -> None:
 
     pair_overlap(*pairs[0], EPS)  # JIT warm-up
     t_numba = best_of(lambda: [pair_overlap(*p, EPS) for p in pairs])
-    t_pysat = best_of(lambda: [python_sat(p) for p in pairs[:1000]], repeats=3) * N_PAIRS / 1000
-    t_shp = best_of(lambda: [shapely_build_and_test(p) for p in pairs[:1000]], repeats=3)
-    t_shp *= N_PAIRS / 1000
+    slow = pairs[:N_TIMED_SLOW]
+    t_pysat = best_of(lambda: [python_sat(p) for p in slow], repeats=3)
+    t_shp = best_of(lambda: [shapely_build_and_test(p) for p in slow], repeats=3)
 
     fast = np.array([pair_overlap(*p, EPS) for p in pairs])
     ref = np.array([shapely_build_and_test(p) for p in pairs])
@@ -137,12 +138,12 @@ def main() -> None:
     assert not np.any(ref & ~fast)
     disagree = int(np.sum(fast != ref))
 
-    for name, secs in (
-        ("shapely polygons, per pair", t_shp),
-        ("pure-Python SAT, per pair", t_pysat),
-        ("Numba SAT, per pair", t_numba),
+    for name, secs, count in (
+        ("shapely polygons, per pair", t_shp, N_TIMED_SLOW),
+        ("pure-Python SAT, per pair", t_pysat, N_TIMED_SLOW),
+        ("Numba SAT, per pair", t_numba, N_PAIRS),
     ):
-        rows.append((name, "us/pair", secs / N_PAIRS * 1e6, N_PAIRS))
+        rows.append((name, "us/pair", secs / count * 1e6, count))
 
     lp = lattice_from_results()
     layout = lattice_layout(200, lp)

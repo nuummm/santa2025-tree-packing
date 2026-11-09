@@ -4,7 +4,7 @@
 
 **A from-scratch Numba solver that packs 1–200 non-convex tree polygons into the smallest square, for every n.**
 **Correctness is two-staged: a conservative separating-axis test during search, then an independent shapely check of every n from the written file.**
-**Runs are reproducible (move budgets, in-kernel seeding); the full 200-instance run takes 25 minutes on a 10-core Apple M5 and scores 72.0093.**
+**Runs are reproducible (move budgets, in-kernel seeding); the full 200-instance run takes 24 minutes on a 10-core Apple M5 and scores 72.0093.**
 
 ![n = 200 layout](docs/figures/n200.png)
 
@@ -12,10 +12,12 @@
 
 I won a bronze medal in the Kaggle competition
 [Santa 2025 – Christmas Tree Packing Challenge](https://www.kaggle.com/competitions/santa-2025)
-(rank 287 of 3,357 teams, score 70.2503). This repository is an independent
-re-implementation written after the competition from the problem statement alone,
-without public submissions or external binaries, so its score differs from the
-competition one.
+(rank 287 of 3,357 teams, private leaderboard score 70.2503). That submission combined
+ideas from public notebooks. This repository does not use them: it is an independent
+implementation written from scratch after the competition, starting from the
+competition's published problem definition (statement, evaluation rule and the
+official tree outline) and the general techniques listed under
+[References](#references). Every number below comes from this code.
 
 ## Results
 
@@ -26,21 +28,28 @@ computed by the final validator from the written `submission.csv`.
 | | |
 |---|---|
 | Total score (sum of side² / n, lower is better) | **72.0093** |
-| Wall time (lattice search 17 s, three seeds, ensemble, validation) | 25 min |
+| Wall time (lattice search 12 s, three seeds, ensemble, validation) | 24 min (1,413 s) |
 | Configurations passing the final overlap check | 200 / 200 |
 
-**Stacking table** — each stage starts from the previous one (seed 0), the last row
-merges three seeds per n ([benchmarks/ablation.csv](benchmarks/ablation.csv)):
+**Stacking table** — each stage starts from the previous one. Stages are run for
+seeds 0, 1 and 2; the table shows each seed, the mean and the band totals of the mean.
+The last row merges the three seeds per n
+([benchmarks/ablation.csv](benchmarks/ablation.csv)):
 
-| Stage | Score | Δ | n 1–20 | n 21–100 | n 101–200 |
-|---|---:|---:|---:|---:|---:|
-| double lattice | 80.2122 | — | 11.1275 | 32.2735 | 36.8112 |
-| + simulated annealing | 72.3578 | -7.8544 | 8.6806 | 29.2078 | 34.4694 |
-| + compaction | 72.3442 | -0.0135 | 8.6804 | 29.2040 | 34.4599 |
-| + remove-one cascade | 72.2672 | -0.0771 | 8.6737 | 29.1677 | 34.4257 |
-| + per-n ensemble of seeds 0,1,2 | 72.0093 | -0.2579 | 8.6019 | 29.0632 | 34.3443 |
+| Stage | seed 0 | seed 1 | seed 2 | Mean | Δ mean | n 1–20 | n 21–100 | n 101–200 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| double lattice | 80.2122 | 80.2122 | 80.2122 | 80.2122 | — | 11.1275 | 32.2735 | 36.8112 |
+| + simulated annealing | 72.3578 | 72.3065 | 72.3547 | 72.3397 | -7.8725 | 8.6735 | 29.2041 | 34.4620 |
+| + compaction | 72.3442 | 72.2941 | 72.3420 | 72.3268 | -0.0129 | 8.6733 | 29.2004 | 34.4531 |
+| + remove-one cascade | 72.2672 | 72.2281 | 72.2713 | 72.2555 | -0.0713 | 8.6711 | 29.1608 | 34.4236 |
+| + per-n ensemble of seeds 0,1,2 | | | | 72.0093 | -0.2462 | 8.6019 | 29.0632 | 34.3443 |
 
-Single seeds after all stages: seed 0: 72.2672, seed 1: 72.2281, seed 2: 72.2713.
+The lattice is deterministic, so its row is the same for every seed. The spread
+between seeds after annealing (0.05) is larger than the compaction gain, but the
+compaction and remove-one gains have the same sign and similar size in every seed.
+The ensemble uses three times the compute of one seed; a single seed with three times
+the moves has not been run, so the ensemble gain is not separated from the effect of
+the extra compute.
 
 **Density per n** (n·A / side², A = tree area). The lattice cut-out is loose for small n
 and saw-toothed as n crosses row and column boundaries; annealing lifts every n.
@@ -54,9 +63,11 @@ gap is presumably loss at the walls of the square, which is what a next version 
 target.
 
 **Speed** ([benchmarks/collision.csv](benchmarks/collision.csv)): single process, JIT
-compiled before timing, best of repeats, 5,000 random pairs with centres 0.3–1.6 apart.
-Other jobs were running on the machine, so treat the ratios as indicative. On these
-pairs the Numba test and shapely agreed on all 5,000.
+compiled before timing, best of repeats, random pairs with centres 0.3–1.6 apart
+(Numba timed on 5,000 pairs, shapely and pure Python on the first 1,000). Other jobs
+were running on the machine, so treat the ratios as indicative. On all 5,000 pairs the
+Numba test and shapely agreed; these pairs are mostly away from contact, and the
+behaviour right at contact is covered by the tests.
 
 | Implementation | Pair test (µs/pair) | Annealer, n = 200 (moves/s) |
 |---|---:|---:|
@@ -64,8 +75,11 @@ pairs the Numba test and shapely agreed on all 5,000.
 | pure-Python SAT | 32.8 | — |
 | Numba SAT | **0.70** | **1,443,000** |
 
-The shapely annealer builds the moved polygon and tests it against all others with
-shapely's vectorised predicates; it measures per-move cost only.
+The like-for-like number is the pair test, about 15× faster in Numba. The annealer
+rates are not like-for-like: the shapely annealer builds the moved polygon and tests it
+against all others on every move, while the Numba annealer runs the Metropolis test
+first and skips the collision test for rejected moves, so part of its higher rate
+comes from doing less work per move.
 
 ![speed](docs/figures/speedup.png)
 
@@ -89,8 +103,17 @@ Details, the reasoning behind each choice, and limitations: [docs/design.md](doc
 
 ## Reproduce
 
+Quick check (n = 1..20, small budget; about 12 s on the machine above):
+
 ```bash
 uv sync
+uv run treepack solve --n-max 20 --moves-per-tree 2000 --seeds 0 1 --out results/demo
+uv run treepack validate --partial results/demo/submission.csv
+```
+
+Full run and the committed tables and figures:
+
+```bash
 uv run treepack solve --moves-per-tree 250000 --seeds 0 1 2 --out results
 uv run treepack validate results/submission.csv
 uv run python scripts/run_ablation.py      # benchmarks/ablation.csv, sides.csv
@@ -99,8 +122,8 @@ uv run python scripts/make_figures.py      # docs/figures/*.png
 uv run pytest                              # unit + small end-to-end tests
 ```
 
-`results/` is not committed. The generated `submission.csv` will be attached to a
-GitHub Release.
+`results/` is not committed; the full run regenerates `submission.csv` and the
+per-stage metrics.
 
 ## Layout
 
@@ -124,8 +147,9 @@ tests/            pytest suite (geometry, collision vs shapely, validator, searc
 
 ## References
 
-* Problem statement: W. Reade, A. Oldacre, *Santa 2025 – Christmas Tree Packing
-  Challenge*, Kaggle, 2025. <https://www.kaggle.com/competitions/santa-2025>
+* Problem definition: *Santa 2025 – Christmas Tree Packing Challenge*, Kaggle, 2025:
+  statement and evaluation pages, and the tree outline from the hosts' starter
+  notebook. <https://www.kaggle.com/competitions/santa-2025>
 * C. Ericson, *Real-Time Collision Detection*, 2004 (separating axis test).
 * J. A. Bennell, J. F. Oliveira, "The geometry of nesting problems: a tutorial",
   *EJOR* 184(2), 2008 (convex decomposition for overlap tests).
@@ -143,8 +167,11 @@ included.
 
 ### 日本語の要約
 
-Kaggle Santa 2025（1〜200 本のツリー多角形を最小の正方形に詰める問題）のソルバーを、
-コンペ終了後に問題文だけを元に一から書き直したものです。探索中は Numba の保守的な
-分離軸判定、最終確認は書き出した CSV を Decimal と shapely で全 n 再検査する 2 段構成で、
-手数予算と seed 固定により同じコマンドで同じ結果が再現されます。スコアはコンペ時
-（銅メダル、287 位 / 3,357 チーム、70.2503）とは異なります。
+Kaggle Santa 2025（1〜200 本のツリー多角形を最小の正方形に詰める問題）のソルバーです。
+コンペでは銅メダル（287 位 / 3,357 チーム、Private スコア 70.2503）を取りました。
+そのときの提出は公開ノートブックのアイデアを組み合わせたものでしたが、この repo は
+それらを使わず、コンペ終了後に、公開されている問題定義（問題文・評価方法・公式の
+ツリー形状）と一般的な手法をもとに一から書き直した独立実装です。README の数値はすべてこの repo の
+コードで得たものです。探索中は Numba の保守的な分離軸判定、最終確認は書き出した CSV を
+Decimal と shapely で全 n 再検査する 2 段構成で、手数予算と seed 固定により同じコマンドで
+同じ結果が再現されます。

@@ -7,8 +7,9 @@ For every n = 1..200, place n copies of a fixed 15-vertex "Christmas tree" polyg
 that the axis-aligned square containing all of them is as small as possible. The
 score is the sum over n of side(n)² / n; lower is better. A submission lists
 `x, y, deg` for each tree as strings prefixed with `s`, and coordinates must stay in
-[-100, 100]. Source: the competition's Overview, Evaluation and Data pages
-(<https://www.kaggle.com/competitions/santa-2025>).
+[-100, 100]. Source: the competition's published problem definition, i.e. the
+Overview, Evaluation and Data pages (<https://www.kaggle.com/competitions/santa-2025>)
+and the tree outline given in the hosts' starter notebook for the competition.
 
 Two facts shape the solver:
 
@@ -43,18 +44,19 @@ that pass it are saved.
 
 The 1e18 scaling in the gate is not about precision; it puts coordinates far from 1
 so that any absolute tolerance inside the geometry library is negligible relative to
-the trees. The gate follows the rules as published, but it is my own code, not the
+the trees. The gate applies the published overlap rule (interiors may not intersect,
+touching is allowed) in the usual shapely form, but it is my own code, not the
 competition's metric, so agreement with the leaderboard is checked by submitting.
 
 ## Search
 
 | Stage | Module | Idea |
 |---|---|---|
-| double lattice | `lattice.py` | A tree and its half-turned copy form a cell; cells repeat on a 2-D lattice. Scan (θ, u, v), bisect the periods, minimise cell area; then cut the n trees that fit in the smallest square window. |
+| double lattice | `lattice.py` | A tree and its half-turned copy form a cell; cells repeat on a 2-D lattice. Scan (θ, u, v), bisect the periods (this finds a feasible period, not necessarily the smallest, because feasibility is not monotone for interlocking shapes), minimise cell area; then cut the n trees that fit in the smallest square window. |
 | annealing | `anneal.py` | Moves: translate, rotate, or both, with step sizes shrinking geometrically. 70 % of moves pick a tree on the boundary of the union box. Energy `max(w, h) + 0.1·(w + h)`. Metropolis test first (O(n)), collision test only if it passes. |
 | compaction | `compact.py` | Scale the layout towards its centre, then push trees inward one by one; halve the step when a sweep stops helping. Kept only if the square side shrinks. |
 | remove-one | `initializers.py`, `pipeline.py` | Walk n downward: dropping the best boundary tree from the n+1 layout (then compacting) sometimes beats the direct n layout. |
-| ensemble | `ensemble.py` | Several seeds; per n keep the smallest layout that passes the final gate. |
+| ensemble | `ensemble.py` | Several seeds; per n keep the smallest layout that passes the final gate. Candidates are centred on the origin first (see below). |
 
 **Budget in moves, not seconds.** The annealer runs `moves_per_tree × max(n, 30)`
 moves and seeds NumPy's RNG inside the compiled function from `(seed, n)`. A run is a
@@ -63,6 +65,12 @@ pure function of its arguments: the same command gives a byte-identical
 
 **Why trees on the boundary.** Only trees that touch the union box can shrink it;
 picking them more often concentrates moves where the objective can change.
+
+**Why layouts are centred before the gate.** The energy depends only on the size of
+the union box, not on where it is. For a single tree every translation is therefore
+accepted, and over tens of millions of moves the tree wanders; with a large budget it
+can pass the [-100, 100] limit. The ensemble translates each candidate so that its box
+is centred on the origin before validating it, which does not change the side.
 
 **Why the extra `w + h` term.** With several trees on the binding side, moving one
 of them inward does not change `max(w, h)`, so the pure objective is flat exactly where
@@ -89,5 +97,8 @@ per-n ensemble.
   penalty usually explores dense arrangements better.
 * Small n (roughly n ≤ 20) start from a lattice cut-out, which is a poor start for
   them; dedicated starts or exhaustive symmetric layouts would help.
+* The ensemble gain is measured against a single seed at one third of its compute.
+  The like-for-like baseline (one seed with three times the moves) has not been run,
+  so part of the gain may come from the extra compute rather than from diversity.
 * The budget is uniform per tree. Spending more moves where the per-n gap to the
   density curve is largest is the obvious next experiment.
