@@ -1,14 +1,16 @@
-"""Final gate: re-check a submission from its text with exact-decimal inputs and shapely.
+"""Final gate: re-check a submission from its text with Decimal parsing and shapely.
 
 This is independent of the Numba code used during search. Values are parsed from the
 strings as ``Decimal``, scaled up by a large constant before being handed to shapely
 (coordinates far from 1 keep shapely's absolute tolerances negligible), and two trees
 are reported as overlapping when their polygons intersect without merely touching.
-Every n present in the file is checked, not a sample.
+The geometry itself is evaluated in floating point by shapely. Every n present in the
+file is checked, not a sample.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -44,7 +46,11 @@ class Report:
 def _to_decimal(s: str) -> Decimal:
     if not s.startswith("s"):
         raise ValueError(f"value {s!r} lacks the 's' prefix")
-    return Decimal(s[1:])
+    d = Decimal(s[1:])
+    # Rejects NaN and infinities, and finite values too large for the float geometry.
+    if not d.is_finite() or not math.isfinite(float(d)):
+        raise ValueError(f"value {s!r} is not a finite number")
+    return d
 
 
 def scaled_polygon(x: Decimal, y: Decimal, deg: Decimal) -> Polygon:

@@ -47,3 +47,13 @@ def test_missing_n_is_an_error():
     rows = layouts_to_rows({1: _grid(1)})
     assert not validate_rows(rows).ok
     assert validate_rows(rows, require_all=False).ok
+
+
+def test_non_finite_values_are_reported_not_raised():
+    for bad in ("snan", "nan", "inf", "-Infinity", "1e400"):
+        for col in range(3):
+            rec = ["s0.0", "s0.0", "s0.0"]
+            rec[col] = "s" + bad
+            report = validate_rows({1: [tuple(rec)]}, require_all=False)
+            assert not report.ok
+            assert "not a finite number" in report.errors[0]
