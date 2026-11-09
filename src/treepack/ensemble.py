@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from .io import layouts_to_rows
-from .scoring import side_of
+from .scoring import centered, side_of
 from .validate import validate_rows
 
 
@@ -17,8 +17,11 @@ def is_valid(n: int, layout: np.ndarray) -> bool:
 def ensemble(runs: list[dict[int, np.ndarray]]) -> tuple[dict[int, np.ndarray], dict[int, int]]:
     """For every n, the smallest-side layout among ``runs`` that passes validation.
 
-    Returns the chosen layouts and, per n, the index of the run it came from. An n with
-    no valid candidate is left out, so the caller's full-file validation will flag it.
+    Candidates are centred on the origin before validation: for small n, moving a whole
+    layout does not change the annealing energy, so a layout can drift towards the
+    [-100, 100] coordinate limit. Returns the chosen (centred) layouts and, per n, the
+    index of the run it came from. An n with no valid candidate is left out, so the
+    caller's full-file validation will flag it.
     """
     chosen: dict[int, np.ndarray] = {}
     source: dict[int, int] = {}
@@ -28,8 +31,9 @@ def ensemble(runs: list[dict[int, np.ndarray]]) -> tuple[dict[int, np.ndarray], 
             key=lambda t: (t[0], t[1]),
         )
         for _, idx in cands:
-            if is_valid(n, runs[idx][n]):
-                chosen[n] = runs[idx][n]
+            lay = centered(runs[idx][n])
+            if is_valid(n, lay):
+                chosen[n] = lay
                 source[n] = idx
                 break
     return chosen, source

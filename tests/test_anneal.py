@@ -2,7 +2,7 @@ import numpy as np
 
 from treepack.anneal import anneal
 from treepack.compact import compact
-from treepack.ensemble import is_valid
+from treepack.ensemble import ensemble, is_valid
 from treepack.initializers import remove_one
 from treepack.lattice import lattice_layout
 from treepack.scoring import side_of
@@ -31,6 +31,14 @@ def test_anneal_finds_rotated_single_tree():
     lay, _ = anneal(np.array([[0.0, 0.0, 0.0]]), 50_000, seed=0)
     # Upright the side is 1.0; tilting the tree shrinks its bounding square.
     assert side_of(lay) < 0.82
+
+
+def test_long_single_tree_run_stays_in_range_after_ensemble():
+    # A lone tree's energy ignores its position, so a long run lets it wander past 100.
+    lay, _ = anneal(np.array([[0.0, 0.0, 0.0]]), 30_000_000, seed=1)
+    chosen, _ = ensemble([{1: lay}])
+    assert 1 in chosen
+    assert np.all(np.abs(chosen[1][:, :2]) < 1.0)
 
 
 def test_compact_valid_and_not_worse(small_lattice):
