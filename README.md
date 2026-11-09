@@ -12,9 +12,8 @@
 
 I won a bronze medal in the Kaggle competition
 [Santa 2025 – Christmas Tree Packing Challenge](https://www.kaggle.com/competitions/santa-2025)
-(rank 287 of 3,357 teams, private leaderboard score 70.2503). That submission combined
-ideas from public notebooks. This repository does not use them: it is an independent
-implementation written from scratch after the competition, starting from the
+(rank 287 of 3,357 teams, private leaderboard score 70.2503). This repository is an
+independent implementation written from scratch after the competition, starting from the
 competition's published problem definition (statement, evaluation rule and the
 official tree outline) and the general techniques listed under
 [References](#references). Every number below comes from this code.
@@ -169,8 +168,7 @@ included.
 
 Kaggle Santa 2025（1〜200 本のツリー多角形を最小の正方形に詰める問題）のソルバーです。
 コンペでは銅メダル（287 位 / 3,357 チーム、Private スコア 70.2503）を取りました。
-そのときの提出は公開ノートブックのアイデアを組み合わせたものでしたが、この repo は
-それらを使わず、コンペ終了後に、公開されている問題定義（問題文・評価方法・公式の
+この repo は、コンペ終了後に、公開されている問題定義（問題文・評価方法・公式の
 ツリー形状）と一般的な手法をもとに一から書き直した独立実装です。README の数値はすべてこの repo の
 コードで得たものです。探索中は Numba の保守的な分離軸判定、最終確認は書き出した CSV を
 Decimal と shapely で全 n 再検査する 2 段構成で、手数予算と seed 固定により同じコマンドで
